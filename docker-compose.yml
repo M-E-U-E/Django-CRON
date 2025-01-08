@@ -1,0 +1,62 @@
+services:
+  db:
+    image: postgres:latest
+    container_name: cron_Postgres
+    environment:
+      POSTGRES_USER: postUser
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: cron_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - postCRON
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postUser"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  web:
+    build:
+      context: .
+    container_name: cron_Django
+    command: python manage.py runserver 0.0.0.0:8000
+    volumes:
+      - .:/app  # Mount Docker socket to allow docker exec
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DB_HOST: cron_Postgres
+      DB_PORT: 5432
+      DB_USER: postUser
+      DB_PASSWORD: password
+      DB_NAME: cron_db
+    networks:
+      - postCRON
+
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: cron_Admin
+    ports:
+      - "5050:80"
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@admin.com
+      PGADMIN_DEFAULT_PASSWORD: admin123
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    restart: unless-stopped
+    networks:
+      - postCRON
+
+volumes:
+  postgres_data:
+  pgadmin_data:
+
+networks:
+  postCRON:
+    driver: bridge
