@@ -1,33 +1,31 @@
 from django.db import models
 
-class Transaction(models.Model):
-    agent_id = models.CharField(max_length=100, unique=True)
-    lead_date = models.DateTimeField(null=True, blank=True)
-    lead_check_in = models.DateTimeField(null=True, blank=True)
-    lead_check_out = models.DateTimeField(null=True, blank=True)
-    meeting_id = models.CharField(max_length=100, null=True, blank=True)
-    boom_score = models.FloatField(null=True, blank=True)
-    boom_score_delta = models.FloatField(null=True, blank=True)
-    boom_score_delta_bucket = models.CharField(max_length=100, null=True, blank=True)
-    conversation = models.CharField(max_length=100, null=True, blank=True)
-    language_code = models.CharField(max_length=10, null=True, blank=True)
-    device_category = models.CharField(max_length=50, null=True, blank=True)
-    country_city_code = models.CharField(max_length=100, null=True, blank=True)
-    brand_id = models.CharField(max_length=50, null=True, blank=True)
-    lifter = models.CharField(max_length=50, null=True, blank=True)
-    home_city = models.CharField(max_length=100, null=True, blank=True)
-    home_country = models.CharField(max_length=100, null=True, blank=True)
-    home_name = models.CharField(max_length=100, null=True, blank=True)
-    payment_method = models.CharField(max_length=50, null=True, blank=True)
-    transaction_type = models.CharField(max_length=50, null=True, blank=True)
-    transaction_status = models.CharField(max_length=50, null=True, blank=True)
-    transaction_status_value = models.CharField(max_length=50, null=True, blank=True)
-    flag = models.CharField(max_length=50, null=True, blank=True)
-    pnr = models.CharField(max_length=50, null=True, blank=True)
+# Main model for the Kayak transaction report
+class KayakTransaction(models.Model):
+    lead_id = models.CharField(max_length=255, unique=True, verbose_name="Lead ID")
+    lead_date = models.DateTimeField(verbose_name="Lead Date")
+    lead_checkin = models.DateTimeField(verbose_name="Lead Check-in")
+    lead_checkout = models.DateTimeField(verbose_name="Lead Checkout")
+    revenue = models.DecimalField(max_digits=10, decimal_places=2)
+    commission = models.DecimalField(max_digits=10, decimal_places=2)
+    
+    class Meta:
+        verbose_name = "Kayak Transaction"
+        verbose_name_plural = "Kayak Transactions"
 
     def __str__(self):
-        return f"Transaction {self.agent_id}"
+        return self.lead_id
 
-    class Meta:
-        verbose_name = "Transaction"
-        verbose_name_plural = "Transactions"
+
+# # Transaction metadata model
+# class TransactionMetadata(models.Model):
+#     transaction = models.OneToOneField(KayakTransaction, on_delete=models.CASCADE)
+#     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Creation Time")
+#     updated_at = models.DateTimeField(auto_now=True, verbose_name="Update Time")
+
+#     class Meta:
+#         verbose_name = "Transaction Metadata"
+#         verbose_name_plural = "Transaction Metadata"
+
+#     def __str__(self):
+#         return f"Metadata for {self.transaction.lead_id}"
