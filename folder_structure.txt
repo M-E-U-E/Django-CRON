@@ -32,4 +32,11 @@ Django Project Folder Structure:
     └── templates/
         └── admin/
             ├── change_list.html
-            └── import_csv_form.html
+            ├── import_csv_form.html
+            └── custom_login.html
+    └── static/
+        └── admin/
+            ├── css/
+            │   └── custom_login.css
+            └── img/
+                └── admin_logo-rmbg.png
