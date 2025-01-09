@@ -5,12 +5,25 @@ from django.contrib import messages
 from django.shortcuts import render
 import csv
 from io import TextIOWrapper
-from .utils import import_csv_data  # Helper function for CSV data processing
+from .utils import import_csv_data
 from .models import KayakTransaction
 
 @admin.register(KayakTransaction)
 class KayakTransactionAdmin(admin.ModelAdmin):
-    list_display = ('lead_id', 'lead_date', 'lead_checkin', 'lead_checkout', 'revenue', 'commission')
+    list_display = (
+        'lead_id',
+        'lead_date',
+        'lead_checkin',
+        'lead_checkout',
+        'revenue',
+        'commission',
+        'hotel_location_status'
+    )
+    
+    # Optional: Add search and filtering capabilities
+    search_fields = ('lead_id', 'hotel_city', 'hotel_country')
+    list_filter = ('lead_date', 'lead_checkin', 'lead_checkout')
+    
     actions = ['export_as_csv']
 
     def get_urls(self):
@@ -19,7 +32,7 @@ class KayakTransactionAdmin(admin.ModelAdmin):
         """
         urls = super().get_urls()
         custom_urls = [
-            path('import-csv/', self.import_csv_view, name='kayaktransaction_import_csv'),  # Unique path
+            path('import-csv/', self.import_csv_view, name='kayaktransaction_import_csv'),
         ]
         return custom_urls + urls
 
@@ -28,7 +41,7 @@ class KayakTransactionAdmin(admin.ModelAdmin):
         Add an "Import CSV" button to the changelist view.
         """
         extra_context = extra_context or {}
-        extra_context['custom_import_csv_url'] = 'import-csv/'  # Link to custom import CSV URL
+        extra_context['custom_import_csv_url'] = 'import-csv/'
         return super().changelist_view(request, extra_context=extra_context)
 
     def import_csv_view(self, request):
@@ -39,7 +52,6 @@ class KayakTransactionAdmin(admin.ModelAdmin):
             file = request.FILES.get('csv_file')
             if file and file.name.endswith('.csv'):
                 try:
-                    # Decode file and parse CSV data
                     csv_file = TextIOWrapper(file.file, encoding='utf-8')
                     import_csv_data(csv_file)
                     self.message_user(request, "CSV data imported successfully.", level=messages.SUCCESS)
@@ -48,17 +60,29 @@ class KayakTransactionAdmin(admin.ModelAdmin):
                 return HttpResponseRedirect("../")
             self.message_user(request, "Invalid file format. Please upload a CSV file.", level=messages.ERROR)
 
-        # Render the form
         return render(request, 'admin/import_csv_form.html', context={'title': 'Import CSV'})
 
     def export_as_csv(self, request, queryset):
         """
         Export selected transactions as a CSV file.
+        Includes the hotel location status in the export.
         """
         response = HttpResponse(content_type='text/csv')
         response['Content-Disposition'] = 'attachment; filename="kayak_transactions.csv"'
+        
+        # Define CSV headers
         writer = csv.writer(response)
-        writer.writerow(['LeadId', 'LeadDate', 'LeadCheckin', 'LeadCheckout', 'Revenue', 'Commission'])
+        writer.writerow([
+            'LeadId',
+            'LeadDate',
+            'LeadCheckin',
+            'LeadCheckout',
+            'Revenue',
+            'Commission',
+            'Hotel Location'
+        ])
+        
+        # Write data rows
         for transaction in queryset:
             writer.writerow([
                 transaction.lead_id,
@@ -67,14 +91,17 @@ class KayakTransactionAdmin(admin.ModelAdmin):
                 transaction.lead_checkout,
                 transaction.revenue,
                 transaction.commission,
-                
+                transaction.hotel_location_status
             ])
+        
         return response
 
     export_as_csv.short_description = "Export Selected as CSV"
 
-
-# @admin.register(TransactionMetadata)
-# class TransactionMetadataAdmin(admin.ModelAdmin):
-#     list_display = ('transaction', 'created_at', 'updated_at')
-#     readonly_fields = ('created_at', 'updated_at')
+    # Optional: Add custom column display
+    def hotel_location_display(self, obj):
+        """
+        Custom display method for hotel location status in admin list view.
+        """
+        return obj.hotel_location_status
+    hotel_location_display.short_description = "Hotel Location"
