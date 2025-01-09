@@ -23,9 +23,10 @@ services:
     build:
       context: .
     container_name: cron_Django
-    command: python manage.py runserver 0.0.0.0:8000
+    command: sh -c "python manage.py collectstatic --no-input && python manage.py runserver 0.0.0.0:8000"
     volumes:
-      - .:/app  # Mount Docker socket to allow docker exec
+      - .:/app
+      - static_volume:/app/staticfiles
     ports:
       - "8000:8000"
     depends_on:
@@ -37,6 +38,7 @@ services:
       DB_USER: postUser
       DB_PASSWORD: password
       DB_NAME: cron_db
+      DJANGO_SETTINGS_MODULE: cron_project.settings
     networks:
       - postCRON
 
@@ -55,6 +57,7 @@ services:
       - postCRON
 
 volumes:
+  static_volume:
   postgres_data:
   pgadmin_data:
 
