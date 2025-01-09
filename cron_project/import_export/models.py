@@ -1,6 +1,5 @@
 from django.db import models
 
-# Main model for the Kayak transaction report
 class KayakTransaction(models.Model):
     lead_id = models.CharField(max_length=255, unique=True, verbose_name="Lead ID")
     lead_date = models.DateTimeField(verbose_name="Lead Date")
@@ -8,14 +7,33 @@ class KayakTransaction(models.Model):
     lead_checkout = models.DateTimeField(verbose_name="Lead Checkout")
     revenue = models.DecimalField(max_digits=10, decimal_places=2)
     commission = models.DecimalField(max_digits=10, decimal_places=2)
+    hotel_id = models.IntegerField(null=True, blank=True)
+    hotel_country = models.CharField(max_length=100, null=True, blank=True)
+    hotel_city = models.CharField(max_length=100, null=True, blank=True)
     
+    @property
+    def hotel_location_status(self):
+        """
+        Returns 'None' if any of hotel_id, hotel_country, or hotel_city is 
+        blank, null, or negative (for hotel_id).
+        """
+        if (
+            not self.hotel_id or 
+            self.hotel_id < 0 or 
+            not self.hotel_country or 
+            not self.hotel_city or
+            self.hotel_country.strip() == '' or 
+            self.hotel_city.strip() == ''
+        ):
+            return 'None'
+        return f"{self.hotel_city}, {self.hotel_country} (ID: {self.hotel_id})"
+
     class Meta:
         verbose_name = "Kayak Transaction"
         verbose_name_plural = "Kayak Transactions"
 
     def __str__(self):
         return self.lead_id
-
 
 # # Transaction metadata model
 # class TransactionMetadata(models.Model):
