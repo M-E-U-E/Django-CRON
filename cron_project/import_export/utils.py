@@ -9,12 +9,32 @@ def import_csv_data(csv_file):
     import csv
     reader = csv.DictReader(csv_file)
 
+    def parse_date(date_str):
+        """Helper function to parse dates with multiple format attempts"""
+        formats = [
+            '%d/%m/%Y %H:%M:%S',  # DD/MM/YYYY HH:MM:SS
+            '%m/%d/%Y %H:%M:%S',  # MM/DD/YYYY HH:MM:SS
+            '%Y-%m-%d %H:%M:%S'   # YYYY-MM-DD HH:MM:SS
+        ]
+        
+        for date_format in formats:
+            try:
+                return datetime.strptime(date_str, date_format)
+            except ValueError:
+                continue
+        
+        raise ValueError(f"Time data '{date_str}' does not match any expected formats")
+
     for row in reader:
         try:
-            # Parse and convert datetime fields
-            lead_date = datetime.strptime(row['LeadDate'], '%d/%m/%Y %H:%M:%S')
-            lead_checkin = datetime.strptime(row['LeadCheckin'], '%d/%m/%Y %H:%M:%S')
-            lead_checkout = datetime.strptime(row['LeadCheckout'], '%d/%m/%Y %H:%M:%S')
+            # Parse and convert datetime fields with multiple format attempts
+            try:
+                lead_date = parse_date(row['LeadDate'])
+                lead_checkin = parse_date(row['LeadCheckin'])
+                lead_checkout = parse_date(row['LeadCheckout'])
+            except ValueError as e:
+                print(f"Date parsing error for LeadId {row.get('LeadId', 'Unknown')}: {str(e)}")
+                continue
 
             # Process hotel ID - handle empty, non-numeric, and negative values
             try:
