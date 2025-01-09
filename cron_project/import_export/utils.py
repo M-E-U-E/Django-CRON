@@ -1,76 +1,106 @@
+import pandas as pd
 from datetime import datetime
+from django.utils.timezone import make_aware
 from .models import KayakTransaction
 
-def import_csv_data(csv_file):
-    """
-    Import CSV data into KayakTransaction model with date parsing and hotel data validation.
-    Handles null/blank/negative values for hotel fields.
-    """
-    import csv
-    reader = csv.DictReader(csv_file)
 
-    def parse_date(date_str):
-        """Helper function to parse dates with multiple format attempts"""
-        formats = [
-            '%d/%m/%Y %H:%M:%S',  # DD/MM/YYYY HH:MM:SS
-            '%m/%d/%Y %H:%M:%S',  # MM/DD/YYYY HH:MM:SS
-            '%Y-%m-%d %H:%M:%S'   # YYYY-MM-DD HH:MM:SS
-        ]
-        
-        for date_format in formats:
-            try:
-                return datetime.strptime(date_str, date_format)
-            except ValueError:
-                continue
-        
-        raise ValueError(f"Time data '{date_str}' does not match any expected formats")
+class CSVDataImporter:
+    """
+    Utility class for importing CSV data into the KayakTransaction model.
+    Includes date parsing, hotel data validation, and record creation/updating.
+    """
 
-    for row in reader:
+    @staticmethod
+    def import_csv_data(csv_file):
+        """
+        Main method to import CSV data into the database.
+        Returns a dictionary with counts of successes and errors.
+        """
         try:
-            # Parse and convert datetime fields with multiple format attempts
-            try:
-                lead_date = parse_date(row['LeadDate'])
-                lead_checkin = parse_date(row['LeadCheckin'])
-                lead_checkout = parse_date(row['LeadCheckout'])
-            except ValueError as e:
-                print(f"Date parsing error for LeadId {row.get('LeadId', 'Unknown')}: {str(e)}")
-                continue
-
-            # Process hotel ID - handle empty, non-numeric, and negative values
-            try:
-                hotel_id = int(row.get('HotelID', '-100'))
-                if hotel_id < 0:
-                    hotel_id = None
-            except (ValueError, TypeError):
-                hotel_id = None
-
-            # Process hotel country and city - handle empty or whitespace values
-            hotel_country = row.get('HotelCountry', '').strip() or None
-            hotel_city = row.get('HotelCity', '').strip() or None
-
-            # Handle special cases like 'Not Applicable'
-            if hotel_country == 'Not Applicable':
-                hotel_country = None
-            if hotel_city == 'Not Applicable':
-                hotel_city = None
-
-            # Create or update KayakTransaction
-            KayakTransaction.objects.update_or_create(
-                lead_id=row['LeadId'],
-                defaults={
-                    'lead_date': lead_date,
-                    'lead_checkin': lead_checkin,
-                    'lead_checkout': lead_checkout,
-                    'revenue': float(row['Revenue']),
-                    'commission': float(row['Commission']),
-                    'hotel_id': hotel_id,
-                    'hotel_country': hotel_country,
-                    'hotel_city': hotel_city,
-                },
-            )
+            df = pd.read_csv(csv_file)
         except Exception as e:
-            # Log errors with more context
-            print(f"Error processing row with LeadId {row.get('LeadId', 'Unknown')}:")
-            print(f"Row data: {row}")
-            print(f"Error: {str(e)}")
-            continue
+            print(f"Error reading CSV file: {e}")
+            return {'success_count': 0, 'error_count': 1, 'error': str(e)}
+
+        try:
+            df = CSVDataImporter._process_dataframe(df)
+        except Exception as e:
+            print(f"Error processing DataFrame: {e}")
+            return {'success_count': 0, 'error_count': len(df) if 'df' in locals() else 1, 'error': str(e)}
+
+        success_count, error_count = 0, 0
+
+        for _, row in df.iterrows():
+            try:
+                KayakTransaction.objects.update_or_create(
+                    lead_id=row['LeadId'],
+                    defaults={
+                        'lead_date': row['LeadDate'],
+                        'lead_checkin': row['LeadCheckin'],
+                        'lead_checkout': row['LeadCheckout'],
+                        'revenue': row['Revenue'],
+                        'commission': row['Commission'],
+                        'hotel_country': row['HotelCountry'],
+                        'hotel_city': row['HotelCity'],
+                    }
+                )
+                success_count += 1
+            except Exception as e:
+                print(f"Error processing row with LeadId {row.get('LeadId', 'Unknown')}: {e}")
+                error_count += 1
+
+        return {'success_count': success_count, 'error_count': error_count}
+
+    @staticmethod
+    def _process_dataframe(df):
+        """
+        Processes the DataFrame: applies data transformations and validations.
+        """
+        # Apply date parsing
+        for date_column in ['LeadDate', 'LeadCheckin', 'LeadCheckout']:
+            df[date_column] = df[date_column].apply(CSVDataImporter._parse_date)
+
+        # Clean and validate hotel data
+        df[[ 'HotelCountry', 'HotelCity']] = df[[ 'HotelCountry', 'HotelCity']].apply(
+            lambda row: CSVDataImporter._clean_hotel_data( row['HotelCountry'], row['HotelCity']),
+            axis=1, result_type='expand'
+        )
+
+        # Ensure Revenue and Commission are numeric
+        df['Revenue'] = pd.to_numeric(df['Revenue'], errors='coerce').fillna(0.0)
+        df['Commission'] = pd.to_numeric(df['Commission'], errors='coerce').fillna(0.0)
+
+        return df
+
+    @staticmethod
+    def _parse_date(date_str):
+        """
+        Parses date strings with multiple format attempts.
+        Returns timezone-aware datetime or None if parsing fails.
+        """
+        if pd.isna(date_str) or not isinstance(date_str, str):
+            return None
+
+        formats = [
+            '%d/%m/%Y %H:%M:%S', '%m/%d/%Y %H:%M:%S', '%Y-%m-%d %H:%M:%S',
+            '%d/%m/%Y %H:%M', '%m/%d/%Y %H:%M', '%Y-%m-%d %H:%M'
+        ]
+        for fmt in formats:
+            try:
+                dt = datetime.strptime(date_str.strip(), fmt)
+                return make_aware(dt)  # Convert to timezone-aware datetime
+            except (ValueError, AttributeError):
+                continue
+        return None  # Return None if no format matches
+
+   
+    @staticmethod
+    def _clean_hotel_data(hotel_country, hotel_city):
+        """
+        Validates and cleans hotel data (country, city).
+        """
+        # Handle hotel_country and hotel_city
+        hotel_country = str(hotel_country).strip() if pd.notna(hotel_country) else None
+        hotel_city = str(hotel_city).strip() if pd.notna(hotel_city) else None
+
+        return hotel_country, hotel_city
