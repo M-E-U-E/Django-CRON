@@ -2,6 +2,7 @@ import pandas as pd
 from datetime import datetime
 from django.utils.timezone import make_aware
 from .models import KayakTransaction
+from .db_modules.upsert_transactions import upsert_transaction_data
 
 
 class CSVDataImporter:
@@ -32,17 +33,16 @@ class CSVDataImporter:
 
         for _, row in df.iterrows():
             try:
-                KayakTransaction.objects.update_or_create(
+                upsert_transaction_data(
                     lead_id=row['LeadId'],
-                    defaults={
-                        'lead_date': row['LeadDate'],
-                        'lead_checkin': row['LeadCheckin'],
-                        'lead_checkout': row['LeadCheckout'],
-                        'revenue': row['Revenue'],
-                        'commission': row['Commission'],
-                        'hotel_country': row['HotelCountry'],
-                        'hotel_city': row['HotelCity'],
-                    }
+                    lead_date=row['LeadDate'],
+                    lead_checkin=row['LeadCheckin'],
+                    lead_checkout=row['LeadCheckout'],
+                    revenue=row['Revenue'],
+                    commission=row['Commission'],
+                    # hotel_id=None,  # Assuming hotel_id is not available in the CSV
+                    hotel_country=row['HotelCountry'],
+                    hotel_city=row['HotelCity']
                 )
                 success_count += 1
             except Exception as e:
@@ -61,8 +61,8 @@ class CSVDataImporter:
             df[date_column] = df[date_column].apply(CSVDataImporter._parse_date)
 
         # Clean and validate hotel data
-        df[[ 'HotelCountry', 'HotelCity']] = df[[ 'HotelCountry', 'HotelCity']].apply(
-            lambda row: CSVDataImporter._clean_hotel_data( row['HotelCountry'], row['HotelCity']),
+        df[['HotelCountry', 'HotelCity']] = df[['HotelCountry', 'HotelCity']].apply(
+            lambda row: CSVDataImporter._clean_hotel_data(row['HotelCountry'], row['HotelCity']),
             axis=1, result_type='expand'
         )
 
@@ -88,18 +88,16 @@ class CSVDataImporter:
         for fmt in formats:
             try:
                 dt = datetime.strptime(date_str.strip(), fmt)
-                return make_aware(dt)  # Convert to timezone-aware datetime
+                return make_aware(dt)
             except (ValueError, AttributeError):
                 continue
-        return None  # Return None if no format matches
+        return None
 
-   
     @staticmethod
     def _clean_hotel_data(hotel_country, hotel_city):
         """
         Validates and cleans hotel data (country, city).
         """
-        # Handle hotel_country and hotel_city
         hotel_country = str(hotel_country).strip() if pd.notna(hotel_country) else None
         hotel_city = str(hotel_city).strip() if pd.notna(hotel_city) else None
 

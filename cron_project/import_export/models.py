@@ -7,7 +7,6 @@ class KayakTransaction(models.Model):
     lead_checkout = models.DateTimeField(verbose_name="Lead Checkout")
     revenue = models.DecimalField(max_digits=10, decimal_places=2)
     commission = models.DecimalField(max_digits=10, decimal_places=2)
-    # hotel_id = models.IntegerField(null=True, blank=True, verbose_name="Hotel ID")
     hotel_country = models.CharField(max_length=100, null=True, blank=True, verbose_name="Hotel Country")
     hotel_city = models.CharField(max_length=100, null=True, blank=True, verbose_name="Hotel City")
 
@@ -25,7 +24,6 @@ class KayakTransaction(models.Model):
         Check if the location data is invalid (e.g., missing, invalid, or negative hotel_id).
         """
         return (
-            # self.hotel_id is None or self.hotel_id < 0 or  # Invalid hotel_id
             not self.hotel_country or not self.hotel_city or  # Missing country or city
             self.hotel_country.strip() == '' or self.hotel_city.strip() == ''  # Empty country or city
         )
