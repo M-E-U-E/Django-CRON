@@ -92,7 +92,7 @@ class KayakTransactionAdmin(admin.ModelAdmin):
         """
         Static method to handle CSV data import logic.
         """
-        import_csv_data(csv_file)
+        CSVDataImporter.import_csv_data(csv_file)
         messages.success(request, "CSV data imported successfully.")
 
     @staticmethod
