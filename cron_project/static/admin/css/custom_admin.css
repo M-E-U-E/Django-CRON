@@ -1,0 +1,107 @@
+/* custom_admin.css */
+
+/* Custom admin theme styles */
+
+body {
+    font-family: Arial, sans-serif;
+    background-color: #f0f0f0;
+}
+
+#header {
+    background-color: #333;
+    color: #fff;
+    padding: 10px;
+    text-align: center;
+}
+
+#header h1 {
+    font-size: 24px;
+    margin: 0;
+}
+
+#header h1 a {
+    color: #fff;
+    text-decoration: none;
+}
+
+#header ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+#header ul li {
+    display: inline-block;
+    margin-right: 20px;
+}
+
+#header ul li a {
+    color: #fff;
+    text-decoration: none;
+}
+
+#header ul li a:hover {
+    color: #ccc;
+}
+
+#branding {
+    background-color: #333;
+    padding: 10px;
+    text-align: center;
+}
+
+#branding h1 {
+    font-size: 24px;
+    margin: 0;
+}
+
+#branding h1 a {
+    color: #fff;
+    text-decoration: none;
+}
+
+.module {
+    background-color: #fff;
+    padding: 10px;
+    border: 1px solid #ddd;
+    margin-bottom: 20px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+.module h2 {
+    font-size: 18px;
+    margin: 0;
+}
+
+.module ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.module ul li {
+    margin-bottom: 10px;
+}
+
+.module ul li a {
+    text-decoration: none;
+}
+
+.module ul li a:hover {
+    text-decoration: underline;
+}
+
+/* Custom admin theme colors */
+
+.admin-color {
+    background-color: #333;
+    color: #fff;
+}
+
+.admin-color a {
+    color: #fff;
+}
+
+.admin-color a:hover {
+    color: #ccc;
+}

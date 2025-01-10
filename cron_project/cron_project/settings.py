@@ -134,3 +134,15 @@ LOGOUT_REDIRECT_URL = '/admin'
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+
+ADMIN_MEDIA_PREFIX = '/static/admin/'
+
+# Custom admin theme CSS and JavaScript files
+
+CUSTOM_ADMIN_THEME_CSS = 'custom_admin_theme/custom_admin.css'
+CUSTOM_ADMIN_THEME_JS = 'custom_admin_theme/custom_admin.js'
+
+# Add custom admin theme CSS and JavaScript files to the admin interface
+
+ADMIN_BASE_TEMPLATE = 'admin/base.html'

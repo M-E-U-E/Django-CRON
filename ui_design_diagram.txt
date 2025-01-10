@@ -1,0 +1,25 @@
+Grid Layout Design Diagram for UI:
+
++---------------------+---------------------+---------------------+
+|                     |                     |                     |
+|      Header         |      Header         |      Header         |
+|                     |                     |                     |
++---------------------+---------------------+---------------------+
+|                     |                     |                     |
+|      Sidebar        |                     |      Sidebar        |
+|                     |                     |                     |
++---------------------+---------------------+---------------------+
+|                     |                     |                     |
+|      Main Content   |      Main Content    |      Main Content   |
+|                     |                     |                     |
++---------------------+---------------------+---------------------+
+|                     |                     |                     |
+|      Footer         |      Footer         |      Footer         |
+|                     |                     |                     |
++---------------------+---------------------+---------------------+
+
+Components:
+- Header: Contains the title and navigation links.
+- Sidebar: Contains links to different sections of the application.
+- Main Content: Displays the main information and functionality.
+- Footer: Contains copyright and additional links.
