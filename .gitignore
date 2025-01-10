@@ -1,3 +1,7 @@
 .venv
 env
+<<<<<<< HEAD
 cron_project/staticfiles
+=======
+cron_project/staticfiles
+>>>>>>> da4fb97 ("Updated .gitignore to ignore .env, added cron_project/staticfiles")
