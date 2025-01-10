@@ -40,7 +40,7 @@ class CSVDataImporter:
                     lead_checkout=row['LeadCheckout'],
                     revenue=row['Revenue'],
                     commission=row['Commission'],
-                    # hotel_id=None,  # Assuming hotel_id is not available in the CSV
+                    hotel_id=None,  # Assuming hotel_id is not available in the CSV
                     hotel_country=row['HotelCountry'],
                     hotel_city=row['HotelCity']
                 )
