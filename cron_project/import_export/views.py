@@ -4,10 +4,14 @@ from django.views.generic import TemplateView
 from django.contrib.admin.views.decorators import staff_member_required
 from django.utils.decorators import method_decorator
 from django.db.models import Sum, Count
+from django.shortcuts import render
 from .models import KayakTransaction  # Add this import
 from django.db.models.functions import TruncMonth
 import plotly.graph_objects as go
 import pandas as pd
+
+def home(request):
+    return render(request, 'admin/custom_login.html')
 
 class CustomAdminLoginView(LoginView):
     template_name = 'admin/custom_login.html'
