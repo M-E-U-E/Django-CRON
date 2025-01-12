@@ -8,3 +8,4 @@ pandas>=2.1.4
 django-rest-framework>=0.1.0
 plotly
 django-unfold
+django-cron
