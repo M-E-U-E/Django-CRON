@@ -1,11 +1,140 @@
-<!-- cron_project/templates/admin/change_list.html -->
+<!-- change_list.html -->
 
 {% extends "admin/change_list.html" %}
 {% load static %}
 
+{% block extrahead %}
+  {{ block.super }}
+  <!-- Include Chart.js from CDN -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.8.0/Chart.min.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.8.0/Chart.bundle.min.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      /* ---------------------------
+         Line Chart: Monthly Revenue
+      ---------------------------- */
+      const lineChartCtx = document.getElementById('myLineChart').getContext('2d');
+      const lineChartData = JSON.parse('{{ line_chart_data|safe }}');
+
+      const lineChart = new Chart(lineChartCtx, {
+        type: 'line',  // Changed from 'bar' to 'line'
+        data: {
+          datasets: [
+            {
+              label: 'Monthly Revenue',
+              data: lineChartData, // [{ x: '2025-01-01T00:00:00', y: 123.45 }, ...]
+              backgroundColor: 'rgba(54, 162, 235, 0.5)',
+              borderColor: 'rgba(54, 162, 235, 1)',
+              fill: true,
+              lineTension: 0.1,
+              pointBackgroundColor: 'rgba(54, 162, 235, 1)',
+              pointBorderColor: '#fff',
+              pointHoverBackgroundColor: '#fff',
+              pointHoverBorderColor: 'rgba(54, 162, 235, 1)',
+            },
+          ],
+        },
+        options: {
+          responsive: true,
+          scales: {
+            xAxes: [
+              {
+                type: 'time',
+                time: {
+                  unit: 'month',
+                  round: 'month',
+                  displayFormats: {
+                    month: 'MMM YYYY',
+                  },
+                },
+                scaleLabel: {
+                  display: true,
+                  labelString: 'Month',
+                },
+              },
+            ],
+            yAxes: [
+              {
+                ticks: {
+                  beginAtZero: true,
+                },
+                scaleLabel: {
+                  display: true,
+                  labelString: 'Revenue ($)',
+                },
+              },
+            ],
+          },
+          tooltips: {
+            mode: 'index',
+            intersect: false,
+          },
+          hover: {
+            mode: 'nearest',
+            intersect: true,
+          },
+        },
+      });
+
+      /* ---------------------------
+         Pie Chart: Revenue by Country
+         (Group < 8% as "Others")
+      ---------------------------- */
+      const pieChartCtx = document.getElementById('myPieChart').getContext('2d');
+      const pieLabels = JSON.parse('{{ pie_labels|safe }}');  // ['USA', 'Spain', 'Others', ...]
+      const pieValues = JSON.parse('{{ pie_values|safe }}');  // [1000, 500, 200, ...]
+
+      // Dynamically generate colors for the pie chart
+      const pieColors = pieLabels.map((_, index) => {
+        const hue = index * 137.5; // Use the golden angle for distinct colors
+        return `hsl(${hue}, 65%, 50%)`;
+      });
+
+      const pieChart = new Chart(pieChartCtx, {
+        type: 'pie',
+        data: {
+          labels: pieLabels,
+          datasets: [
+            {
+              label: 'Revenue by Country',
+              data: pieValues,
+              backgroundColor: pieColors,
+            },
+          ],
+        },
+        options: {
+          responsive: true,
+          legend: {
+            position: 'top',
+          }
+        }
+      });
+    });
+  </script>
+{% endblock %}
+
 {% block object-tools-items %}
-{{ block.super }}
-<li>
-  <a href="{{ custom_import_csv_url }}" class="button">Import CSV</a>
-</li>
+  {{ block.super }}
+  <li>
+    <a href="{{ custom_import_csv_url }}" class="button">Import CSV</a>
+  </li>
+{% endblock %}
+
+{% block content %}
+  <div style="width:100%; display: flex; flex-wrap: wrap; justify-content: space-between;">
+    <!-- Monthly Revenue Line Chart -->
+    <div style="width:60%; min-width:300px; margin-bottom:30px; border: 2px solid rgb(56, 16, 199); border-radius: 12px;">
+      <h3>Monthly Revenue</h3>
+      <canvas id="myLineChart" style="width:100%; height:400px;"></canvas>
+    </div>
+
+    <!-- Revenue by Country Pie Chart -->
+    <div style="width:40%; min-width:300px; margin-bottom:30px; border: 2px solid rgb(56, 16, 199); border-radius: 12px;">
+      <h3>Revenue by Country</h3>
+      <canvas id="myPieChart" style="width:100%; height:400px;"></canvas>
+    </div>
+  </div>
+
+  <!-- Render the rest of the ChangeList view by calling block.super -->
+  {{ block.super }}
 {% endblock %}
