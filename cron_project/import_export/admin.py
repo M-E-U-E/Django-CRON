@@ -35,7 +35,7 @@ class CSVHandler:
         writer = csv.writer(response)
         writer.writerow([
             'LeadId', 'LeadDate', 'LeadCheckin', 'LeadCheckout',
-            'Revenue', 'Commission', 'Hotel Location'
+            'Revenue', 'Commission', 'Hotel Location' 'hotel_id'
         ])
         for transaction in queryset:
             writer.writerow([
@@ -45,7 +45,8 @@ class CSVHandler:
                 transaction.lead_checkout,
                 transaction.revenue,
                 transaction.commission,
-                transaction.hotel_location_status
+                transaction.hotel_location_status,
+                transaction.hotel_id
             ])
 
 
@@ -97,10 +98,10 @@ class ChartDataPreparer:
 class KayakTransactionAdmin(ModelAdmin):
     list_display = (
         'lead_id', 'lead_date', 'lead_checkin', 'lead_checkout',
-        'revenue', 'commission', 'hotel_location_status'
+        'revenue', 'commission', 'hotel_location_status', 'hotel_id'
     )
-    search_fields = ('lead_id', 'hotel_city', 'hotel_country')
-    list_filter = ('lead_date', 'lead_checkin', 'lead_checkout')
+    search_fields = ('lead_id', 'hotel_city', 'hotel_country', 'hotel_id')
+    list_filter = ('lead_date', 'lead_checkin', 'lead_checkout', 'hotel_id')
     actions = ['export_as_csv']
 
     def get_urls(self):

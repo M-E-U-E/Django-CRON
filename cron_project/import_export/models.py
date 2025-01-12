@@ -9,6 +9,7 @@ class KayakTransaction(models.Model):
     commission = models.DecimalField(max_digits=10, decimal_places=2)
     hotel_country = models.CharField(max_length=100, null=True, blank=True, verbose_name="Hotel Country")
     hotel_city = models.CharField(max_length=100, null=True, blank=True, verbose_name="Hotel City")
+    hotel_id = models.CharField(max_length=255, null=True, blank=True, verbose_name="Hotel ID")  # NEW FIELD
 
     @property
     def hotel_location_status(self):
