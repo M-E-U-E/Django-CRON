@@ -9,6 +9,7 @@ def upsert_transaction_data(lead_id, lead_date, lead_checkin, lead_checkout, rev
             'lead_checkout': lead_checkout,
             'revenue': revenue,
             'commission': commission,
+            'hotel_id': hotel_id,
             'hotel_country': hotel_country,
             'hotel_city': hotel_city,
         }
