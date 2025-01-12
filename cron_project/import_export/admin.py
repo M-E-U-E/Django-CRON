@@ -1,5 +1,3 @@
-# admin.py
-
 from django.contrib import admin, messages
 from django.shortcuts import render
 from django.http import HttpResponse, HttpResponseRedirect
@@ -16,16 +14,90 @@ from .models import KayakTransaction
 from .utils import CSVDataImporter
 
 
+# Utility classes for CSV handling and chart data preparation
+class CSVHandler:
+    @staticmethod
+    def validate_csv(file):
+        """
+        Validate the uploaded file to ensure it is a CSV.
+        """
+        if not file:
+            return "No file selected. Please upload a CSV file."
+        if not file.name.endswith('.csv'):
+            return "Invalid file format. Please upload a CSV file."
+        return None
+
+    @staticmethod
+    def write_csv(response, queryset):
+        """
+        Write the queryset to a CSV file for export.
+        """
+        writer = csv.writer(response)
+        writer.writerow([
+            'LeadId', 'LeadDate', 'LeadCheckin', 'LeadCheckout',
+            'Revenue', 'Commission', 'Hotel Location'
+        ])
+        for transaction in queryset:
+            writer.writerow([
+                transaction.lead_id,
+                transaction.lead_date,
+                transaction.lead_checkin,
+                transaction.lead_checkout,
+                transaction.revenue,
+                transaction.commission,
+                transaction.hotel_location_status
+            ])
+
+
+class ChartDataPreparer:
+    @staticmethod
+    def prepare_line_chart_data(queryset):
+        """
+        Prepare data for the line chart showing monthly revenue.
+        """
+        return [
+            {
+                'x': record['month'].isoformat() if record['month'] else '',
+                'y': float(record['total_revenue']) if record['total_revenue'] else 0.0,
+            }
+            for record in queryset
+        ]
+
+    @staticmethod
+    def prepare_pie_chart_data(queryset):
+        """
+        Prepare data for the pie chart showing revenue by hotel country.
+        Countries contributing less than 6% are grouped under "Others".
+        """
+        total_revenue_all = sum(
+            float(item['total_revenue']) if item['total_revenue'] else 0.0
+            for item in queryset
+        )
+        pie_labels, pie_values, others_total = [], [], 0.0
+
+        for item in queryset:
+            country = item['hotel_country'] or 'Unknown'
+            revenue = float(item['total_revenue']) if item['total_revenue'] else 0.0
+            share = revenue / total_revenue_all if total_revenue_all else 0.0
+
+            if share < 0.06:
+                others_total += revenue
+            else:
+                pie_labels.append(country)
+                pie_values.append(revenue)
+
+        if others_total > 0:
+            pie_labels.append('Others')
+            pie_values.append(others_total)
+
+        return pie_labels, pie_values
+
+
 @admin.register(KayakTransaction)
 class KayakTransactionAdmin(ModelAdmin):
     list_display = (
-        'lead_id',
-        'lead_date',
-        'lead_checkin',
-        'lead_checkout',
-        'revenue',
-        'commission',
-        'hotel_location_status'
+        'lead_id', 'lead_date', 'lead_checkin', 'lead_checkout',
+        'revenue', 'commission', 'hotel_location_status'
     )
     search_fields = ('lead_id', 'hotel_city', 'hotel_country')
     list_filter = ('lead_date', 'lead_checkin', 'lead_checkout')
@@ -58,13 +130,7 @@ class KayakTransactionAdmin(ModelAdmin):
 
         # Convert the queryset into a list of { x, y } for Chart.js
         # x = month (as ISO8601 string), y = total_revenue
-        line_chart_data = [
-            {
-                'x': record['month'].isoformat() if record['month'] else '',
-                'y': float(record['total_revenue']) if record['total_revenue'] else 0.0,
-            }
-            for record in monthly_revenue_qs
-        ]
+        line_chart_data = ChartDataPreparer.prepare_line_chart_data(monthly_revenue_qs)
 
         # --------------------------------------------------------------------
         # 2. Revenue by Hotel Country (Pie Chart), grouping < 8% as "Others"
@@ -76,42 +142,19 @@ class KayakTransactionAdmin(ModelAdmin):
             .order_by('-total_revenue')
         )
 
-        # Calculate total revenue across all countries, converting to float
-        total_revenue_all = sum(
-            float(item['total_revenue']) if item['total_revenue'] else 0.0
-            for item in country_revenue_qs
-        )
-
         # Prepare pie chart labels and values
-        pie_labels = []
-        pie_values = []
-        others_total = 0.0  # Accumulate all countries < 8% here
-
-        for item in country_revenue_qs:
-            country = item['hotel_country'] or 'Unknown'
-            revenue = float(item['total_revenue']) if item['total_revenue'] else 0.0
-            share = revenue / total_revenue_all if total_revenue_all else 0.0
-
-            if share < 0.06:
-                # Group this country's share into "Others"
-                others_total += revenue
-            else:
-                pie_labels.append(country)
-                pie_values.append(revenue)
-
-        # If we have accumulated anything in 'Others', add it
-        if others_total > 0:
-            pie_labels.append('Others')
-            pie_values.append(others_total)
+        pie_labels, pie_values = ChartDataPreparer.prepare_pie_chart_data(country_revenue_qs)
 
         # --------------------------------------------------------------------
         # 3. Serialize data for Chart.js
         # --------------------------------------------------------------------
         extra_context = extra_context or {}
-        extra_context['custom_import_csv_url'] = 'import-csv/'
-        extra_context['line_chart_data'] = json.dumps(line_chart_data, cls=DjangoJSONEncoder)
-        extra_context['pie_labels'] = json.dumps(pie_labels, cls=DjangoJSONEncoder)
-        extra_context['pie_values'] = json.dumps(pie_values, cls=DjangoJSONEncoder)
+        extra_context.update({
+            'custom_import_csv_url': 'import-csv/',
+            'line_chart_data': json.dumps(line_chart_data, cls=DjangoJSONEncoder),
+            'pie_labels': json.dumps(pie_labels, cls=DjangoJSONEncoder),
+            'pie_values': json.dumps(pie_values, cls=DjangoJSONEncoder),
+        })
 
         return super().changelist_view(request, extra_context=extra_context)
 
@@ -121,12 +164,10 @@ class KayakTransactionAdmin(ModelAdmin):
         """
         if request.method == "POST":
             file = request.FILES.get('csv_file')
-            if not file:
-                self._send_message(request, "No file selected. Please upload a CSV file.", messages.ERROR)
-                return HttpResponseRedirect("../")
-
-            if not file.name.endswith('.csv'):
-                self._send_message(request, "Invalid file format. Please upload a CSV file.", messages.ERROR)
+            # Validate the uploaded CSV file
+            error_message = CSVHandler.validate_csv(file)
+            if error_message:
+                self._send_message(request, error_message, messages.ERROR)
                 return HttpResponseRedirect("../")
 
             try:
@@ -170,33 +211,7 @@ class KayakTransactionAdmin(ModelAdmin):
         """
         response = HttpResponse(content_type='text/csv')
         response['Content-Disposition'] = 'attachment; filename="kayak_transactions.csv"'
-        self._write_csv(response, queryset)
+        CSVHandler.write_csv(response, queryset)
         return response
-
-    @staticmethod
-    def _write_csv(response, queryset):
-        """
-        Static method to handle writing data to a CSV file.
-        """
-        writer = csv.writer(response)
-        writer.writerow([
-            'LeadId',
-            'LeadDate',
-            'LeadCheckin',
-            'LeadCheckout',
-            'Revenue',
-            'Commission',
-            'Hotel Location'
-        ])
-        for transaction in queryset:
-            writer.writerow([
-                transaction.lead_id,
-                transaction.lead_date,
-                transaction.lead_checkin,
-                transaction.lead_checkout,
-                transaction.revenue,
-                transaction.commission,
-                transaction.hotel_location_status
-            ])
 
     export_as_csv.short_description = "Export Selected as CSV"
