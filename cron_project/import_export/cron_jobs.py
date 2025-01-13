@@ -34,26 +34,3 @@ class FileProcessingCronJob(CronJobBase):
             print(f"File not found: {file_path}")
         except Exception as e:
             print(f"Error processing file: {e}")
-# from django_cron import CronJobBase, Schedule
-# import os
-
-# class FileProcessingCronJob(CronJobBase):
-#     RUN_EVERY_MINS = 60
-
-#     schedule = Schedule(run_every_mins=RUN_EVERY_MINS)
-#     code = 'import_export.file_processing_cron_job'
-
-#     def do(self):
-#         print("Cron job started.")
-#         file_path = "C:/Users/User/Downloads/KayakTransactionReport.csv"
-
-#         try:
-#             print(f"Processing file at: {file_path}")
-#             with open(file_path, 'r', encoding='utf-8') as file:
-#                 lines = file.readlines()
-#                 for line in lines:
-#                     print(f"Processing line: {line.strip()}")
-#         except FileNotFoundError:
-#             print(f"File not found: {file_path}")
-#         except Exception as e:
-#             print(f"Error processing file: {e}")
