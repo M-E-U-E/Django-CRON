@@ -51,7 +51,11 @@ To view table click on View/Edit Data > All Rows
         <pre><code># Install dependencies
 **run this from the root directory**
 pip install -r requirements.txt
-           
+            
+# Change the CSV file path:(Defaults are:)
+file_path = "C:/Users/User/Downloads/KayakTransactionReport.csv"
+output_file = "C:/Users/User/Downloads/ProcessedReport.csv"
+            
 # Run cron jobs
 cd cron_project
 python manage.py runcrons
