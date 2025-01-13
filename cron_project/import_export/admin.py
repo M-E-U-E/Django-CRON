@@ -8,10 +8,11 @@ from django.core.serializers.json import DjangoJSONEncoder
 import json
 import csv
 from io import TextIOWrapper
-
+from unfold.decorators import action
 from unfold.admin import ModelAdmin
 from .models import KayakTransaction
 from .utils import CSVDataImporter
+from django.http import HttpRequest, HttpResponse, HttpResponseRedirect
 
 
 # Utility classes for CSV handling and chart data preparation
@@ -103,63 +104,21 @@ class KayakTransactionAdmin(ModelAdmin):
     search_fields = ('lead_id', 'hotel_city', 'hotel_country', 'hotel_id')
     list_filter = ('lead_date', 'lead_checkin', 'lead_checkout', 'hotel_id')
     actions = ['export_as_csv']
+    actions_list = ['import_csv_action']
 
-    def get_urls(self):
+    def has_import_csv_permission(self, request: HttpRequest, obj=None):
         """
-        Add a custom URL for the CSV import feature.
+        Permission check for the import CSV action.
+        Return True if the user should be able to import CSV files.
         """
-        urls = super().get_urls()
-        custom_urls = [
-            path('import-csv/', self.import_csv_view, name='kayaktransaction_import_csv'),
-        ]
-        return custom_urls + urls
+        return request.user.is_staff  # Or any other permission logic you want
 
-    def changelist_view(self, request, extra_context=None):
-        """
-        Add an "Import CSV" button and supply dynamic chart data to the changelist view.
-        """
-        # --------------------------------------------------------------------
-        # 1. Monthly Revenue for the Line Chart
-        # --------------------------------------------------------------------
-        monthly_revenue_qs = (
-            KayakTransaction.objects
-            .annotate(month=TruncMonth('lead_date'))
-            .values('month')
-            .annotate(total_revenue=Sum('revenue'))
-            .order_by('month')
-        )
-
-        # Convert the queryset into a list of { x, y } for Chart.js
-        # x = month (as ISO8601 string), y = total_revenue
-        line_chart_data = ChartDataPreparer.prepare_line_chart_data(monthly_revenue_qs)
-
-        # --------------------------------------------------------------------
-        # 2. Revenue by Hotel Country (Pie Chart), grouping < 8% as "Others"
-        # --------------------------------------------------------------------
-        country_revenue_qs = (
-            KayakTransaction.objects
-            .values('hotel_country')
-            .annotate(total_revenue=Sum('revenue'))
-            .order_by('-total_revenue')
-        )
-
-        # Prepare pie chart labels and values
-        pie_labels, pie_values = ChartDataPreparer.prepare_pie_chart_data(country_revenue_qs)
-
-        # --------------------------------------------------------------------
-        # 3. Serialize data for Chart.js
-        # --------------------------------------------------------------------
-        extra_context = extra_context or {}
-        extra_context.update({
-            'custom_import_csv_url': 'import-csv/',
-            'line_chart_data': json.dumps(line_chart_data, cls=DjangoJSONEncoder),
-            'pie_labels': json.dumps(pie_labels, cls=DjangoJSONEncoder),
-            'pie_values': json.dumps(pie_values, cls=DjangoJSONEncoder),
-        })
-
-        return super().changelist_view(request, extra_context=extra_context)
-
-    def import_csv_view(self, request):
+    @action(
+        description=("Import CSV"),
+        url_path="import-csv",
+        permissions=["import_csv"]
+    )
+    def import_csv_action(self, request: HttpRequest):
         """
         Custom admin view for importing CSV files.
         """
@@ -198,6 +157,56 @@ class KayakTransactionAdmin(ModelAdmin):
 
         # Show a simple form prompting user to upload CSV
         return render(request, 'admin/import_csv_form.html', context={'title': 'Import CSV'})
+
+    def has_import_csv_permission(self, request: HttpRequest, obj=None):
+        """
+        Permission check for the import CSV action.
+        Return True if the user should be able to import CSV files.
+        """
+        return request.user.is_staff  # Or any other permission logic you want
+
+    def changelist_view(self, request, extra_context=None):
+        """
+        Add supply dynamic chart data to the changelist view.
+        """
+        # --------------------------------------------------------------------
+        # 1. Monthly Revenue for the Line Chart
+        # --------------------------------------------------------------------
+        monthly_revenue_qs = (
+            KayakTransaction.objects
+            .annotate(month=TruncMonth('lead_date'))
+            .values('month')
+            .annotate(total_revenue=Sum('revenue'))
+            .order_by('month')
+        )
+
+        # Convert the queryset into a list of { x, y } for Chart.js
+        line_chart_data = ChartDataPreparer.prepare_line_chart_data(monthly_revenue_qs)
+
+        # --------------------------------------------------------------------
+        # 2. Revenue by Hotel Country (Pie Chart), grouping < 8% as "Others"
+        # --------------------------------------------------------------------
+        country_revenue_qs = (
+            KayakTransaction.objects
+            .values('hotel_country')
+            .annotate(total_revenue=Sum('revenue'))
+            .order_by('-total_revenue')
+        )
+
+        # Prepare pie chart labels and values
+        pie_labels, pie_values = ChartDataPreparer.prepare_pie_chart_data(country_revenue_qs)
+
+        # --------------------------------------------------------------------
+        # 3. Serialize data for Chart.js
+        # --------------------------------------------------------------------
+        extra_context = extra_context or {}
+        extra_context.update({
+            'line_chart_data': json.dumps(line_chart_data, cls=DjangoJSONEncoder),
+            'pie_labels': json.dumps(pie_labels, cls=DjangoJSONEncoder),
+            'pie_values': json.dumps(pie_values, cls=DjangoJSONEncoder),
+        })
+
+        return super().changelist_view(request, extra_context=extra_context)
 
     @staticmethod
     def _send_message(request, message, level):
